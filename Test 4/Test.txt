@@ -155,12 +155,3 @@ select
 from agg
 where Roaming = 1
 --order by ID_abon, first_date_roaming
-
-
-
-
-
-
-
-
-
