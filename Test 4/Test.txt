@@ -1,0 +1,166 @@
+/*#1 
+    исходные данные:
+В таблице ACTV хранятся данные всех звонков абонентов (ID_abon). 
+Поле Roaming указывает на факт нахождения абонента в роуминге во время звонка 
+1 - был в роуминге
+0 - не был в роуминге
+
+поля таблицы ACTV:
+ID_abon
+Date of call 
+Time of call
+Roaming
+
+    требуется:
+Получить список уникальных ID абонентов, 
+которые звонили в роуминге >=1раза. */
+
+--РЕШЕНИЕ#1
+
+select 
+	ID_abon
+	, sum(Roaming) as sum_roam
+from ACTV
+where Roaming = 1
+group by ID_abon
+having sum(Roaming) >= 1
+
+
+/*#2  
+    исходные данные:
+В таблице ABNT хранятся уникальные ID всех абонентов за месяц. 
+В таблице ROAM хранятся уникальные ID абонентов, которые были в роуминге за месяц. 
+
+    требуется:
+Получить список уникальных ID абонентов, 
+которые не были в роуминге в текущем месяце.*/
+
+--РЕШЕНИЕ#2
+
+select
+	a.ID_abon
+from ABNT a
+left join ROAM r
+	on a.ID_abon = r.ID_abon
+where r.ID_abon is null
+
+/*#3 
+    исходные данные:
+В таблицах ABNT и ROAM хранятся данные по тому сколько потратили абоненты. 
+В таблице ABNT есть все начисления абонентов. 
+В таблице ROAM начисления в роуминге.
+
+поля таблицы ABNT:
+ID_abon 
+CLC
+
+поля таблицы ROAM:
+ID_abon 
+CLC
+
+    требуется:
+Получить список уникальных ID абонентов, 
+у которых начисления в домашней сети будут больше 0. 
+(начисления в домашней сети= все начисления (ABNT.clc)  - начисления в роуминге(ROAM.clc).*/
+
+--РЕШЕНИЕ#3
+
+select 
+	a.ID_abon
+	, a.sum_home - r.sum_roam as sum_diff
+from (
+	select 
+		a.ID_abon
+		, sum(a.CLC) as sum_home
+	from ABNT a
+	group by a.ID_abon
+	) as a
+left join ( --предполагаем что в ABNT есть все абоненты, даже если у них sum(clc) = 0
+	select
+		r.ID_abon
+		, sum(r.CLC) as sum_roam
+	from ROAM r
+	group by r.ID_abon
+		) as r 
+	on a.ID_abon = r.ID_abon 
+where a.sum_home - r.sum_roam > 0
+
+
+
+
+/*#4 
+    исходные данные:
+В таблице ACTV хранятся данные всех звонков абонентов (ID_abon). 
+Поле Roaming указывает на факт нахождения абонента в роуминге во время звонка 
+1 - был в роуминге
+0 - не был в роуминге
+
+поля таблицы ACTV:
+ID_abon
+Date of call 
+Time of call
+Roaming
+
+    требуется:
+Получить список уникальных ID абонентов,
+у которых было больше 5 звонков в роуминге.*/
+
+--РЕШЕНИЕ#4
+
+select 
+	ID_abon
+	, sum(roaming) as sum_roam
+from ACTV
+where Roaming = 1
+group by ID_abon
+having sum(roaming) > 5
+
+
+/*#5 
+    исходные данные:
+В таблице ACTV хранятся данные всех звонков абонентов (ID_abon). 
+Поле Roaming указывает на факт нахождения абонента в роуминге во время звонка 
+1 - был в роуминге
+0 - не был в роуминге
+
+поля таблицы ACTV:
+ID_abon
+Date of call 
+Time of call
+Roaming
+
+    требуется:
+Для каждого абонента выгрузить периоды нахождения в роуминге.
+Допустим, что нахождение в роуминге определяется 
+непрерывной последовательностью звонков в роуминге.*/
+
+--РЕШЕНИЕ#5
+
+with agg as (
+select
+	ID_abon
+	, Date_of_call
+	, Roaming
+	, first_value(Date_of_call) over(partition by ID_abon, Roaming order by Date_of_call asc) as first_date_roaming
+	, last_value(Date_of_call) over(partition by ID_abon, Roaming order by Date_of_call asc) as last_date_roaming
+from
+	ACTV
+order by ID_abon, Date_of_call asc
+)
+
+select
+	ID_abon
+	, first_date_roaming
+	, last_date_roaming
+from agg
+where Roaming = 1
+--order by ID_abon, first_date_roaming
+
+
+
+
+
+
+
+
+
